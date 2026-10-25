@@ -31,16 +31,23 @@ int main(int argc, char *argv[]){
     // parse through user input
     while (fgets(userInput, sizeof(userInput), file) != NULL){
         token = strtok(userInput, ",");
-        printf("%s", token);
+
+        if (token != NULL) {
+            snprintf(taskName, sizeof(taskName), "%s", token);
+        }
+
         for (int i = 0; i < 3; i++) {
             token = strtok(NULL, ",");
             if (token != NULL) {
-                printf("%s", token);
+                if (i == 0){
+                    priority = atoi(token);
+                } else if (i == 1){
+                    burstTime = atoi(token);
+                } else if (i == 2) {
+                    queueNum = atoi(token);
+                }
             }
         }
+        printf("Task: %s, Priority: %d, Burst: %d, Queue: %d\n", taskName, priority, burstTime, queueNum);
     }
-    // print new line at end to avoid % from terminal to indicate that program output doesn't end with a new line
-    printf("\n");
-
-    // parse through input file and read it
 }
