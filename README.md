@@ -29,4 +29,4 @@ The program calculates the turnaround time, waiting time, and response time for 
 ## Known Bugs or Problems
 
 ## Output Result
-
+![Application Screenshot](screenshots/outputScreenshot.png)
