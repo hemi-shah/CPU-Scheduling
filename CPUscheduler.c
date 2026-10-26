@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// define a struct to keep track of a task
 typedef struct {
     char taskName[20];
     int priority;
@@ -17,6 +18,7 @@ typedef struct {
     int responseTime;
 } Task;
 
+// prototypes for helper functions and computational functions 
 void sortPriority(Task queue[], int size);
 void sortBurst(Task queue[], int size);
 void recordExecution(Task *task, int executionTime);
@@ -26,18 +28,26 @@ void roundRobinAlgo(Task queue[], int size);
 void FCFSAlgo(Task queue[], int size);
 void printGantt();
 void printStatistics(Task tasks[], int size);
+int hasTasks(Task queue[], int size);
 
+// variables to keep track of the gantt chart
 char ganttTasks[400][20];
 int ganttTimes[401];
 int ganttSize = 0;
 int currentTime = 0;
+// variable to keep track of index in round robin queue
+int rrIndex = 0;  
 
 int main(int argc, char *argv[]) {
 
+    // file pointer
     FILE *file;
 
+    // stores user input
     char userInput[1024];
+    // create a task object
     Task task;
+    // token pointer
     char *token;
 
     // queue 1
@@ -60,12 +70,15 @@ int main(int argc, char *argv[]) {
 
     // check to see if input file is provided
     if (nargs == 1) {
+        // if file is provided then it is read
         file = fopen(argv[1], "r");
+        // if file does not exist it prints error message
         if (file == NULL) {
             fprintf(stderr, "Could not open file.\n");
             return 1;
         }
     } else {
+        // if user does not provide a file name then it prints error message
         fprintf(stderr, "Please provide an input filename.\n");
         return 1;
     }
@@ -74,8 +87,10 @@ int main(int argc, char *argv[]) {
     while (fgets(userInput, sizeof(userInput), file) != NULL) {
         if (userInput[0] == '\n') continue;
 
+        // splits userInput by delimeter ,
         token = strtok(userInput, ",");
 
+        // if there is user input, then the first slice of the user input is saved as the tasks task name
         if (token != NULL) {
             snprintf(task.taskName, sizeof(task.taskName), "%s", token);
         } else {
@@ -84,6 +99,7 @@ int main(int argc, char *argv[]) {
 
         int valid = 1;
 
+        // parses through line in file and for each data information, it stores it in respective variable for the task
         for (int i = 0; i < 3; i++) {
             token = strtok(NULL, ",");
             if (token != NULL) {
@@ -123,6 +139,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (task.queueNum == 1) {
+            // executes if the queue is full
             if (realTimeSize >= 100) {
                 fprintf(stderr, "Queue 1 is full.\n");
                 fclose(file);
@@ -131,25 +148,31 @@ int main(int argc, char *argv[]) {
             // inserts task at index then increments counter
             realTimeQueue[realTimeSize++] = task;
         } else if (task.queueNum == 2) {
+            // executes if the queue is full
             if (systemSize >= 100) {
                 fprintf(stderr, "Queue 2 is full.\n");
                 fclose(file);
                 return 1;
             }
+            // inserts task at index then increments counter
             systemQueue[systemSize++] = task;
         } else if (task.queueNum == 3) {
+            // executes if the queue is full
             if (interactiveSize >= 100) {
                 fprintf(stderr, "Queue 3 is full.\n");
                 fclose(file);
                 return 1;
             }
+            // inserts task at index then increments counter
             interactiveQueue[interactiveSize++] = task;
         } else if (task.queueNum == 4) {
+            // executes if the queue is full
             if (batchSize >= 100) {
                 fprintf(stderr, "Queue 4 is full.\n");
                 fclose(file);
                 return 1;
             }
+            // inserts task at index then increments counter
             batchQueue[batchSize++] = task;
         }
     }
@@ -157,13 +180,24 @@ int main(int argc, char *argv[]) {
     // close the input file
     fclose(file);
 
-    // runs each queue in priority order
-    priorityAlgo(realTimeQueue, realTimeSize);
-    SJFAlgo(systemQueue, systemSize);
+    // sort queues 1 and 2 once, ties keep input order
+    sortPriority(realTimeQueue, realTimeSize);
+    sortBurst(systemQueue, systemSize);
 
-    // run interactive and batch queues
-    roundRobinAlgo(interactiveQueue, interactiveSize);
-    FCFSAlgo(batchQueue, batchSize);
+    // multilevel queue scheduler: always pick from the highest-priority nonempty queue
+    while (1) {
+        if (hasTasks(realTimeQueue, realTimeSize)) {
+            priorityAlgo(realTimeQueue, realTimeSize);
+        } else if (hasTasks(systemQueue, systemSize)) {
+            SJFAlgo(systemQueue, systemSize);
+        } else if (hasTasks(interactiveQueue, interactiveSize)) {
+            roundRobinAlgo(interactiveQueue, interactiveSize);
+        } else if (hasTasks(batchQueue, batchSize)) {
+            FCFSAlgo(batchQueue, batchSize);
+        } else {
+            break; // all queues are empty
+        }
+    }
 
     // print out gantt chart of queue
     printGantt();
@@ -184,18 +218,23 @@ int main(int argc, char *argv[]) {
     double totalWaiting = 0;
     double totalResponse = 0;
 
+    // store pointers to all four scheduling queues
     Task *queues[] = {
         realTimeQueue, systemQueue,
         interactiveQueue, batchQueue
     };
 
+    // store size of each queue
     int sizes[] = {
         realTimeSize, systemSize,
         interactiveSize, batchSize
     };
 
+    // loop through each queue
     for (int q = 0; q < 4; q++) {
+        // loop through each task in the queue
         for (int i = 0; i < sizes[q]; i++) {
+            // calculate the total turnaround, waiting, and response times for the queue
             totalTurnaround += queues[q][i].turnaroundTime;
             totalWaiting += queues[q][i].waitingTime;
             totalResponse += queues[q][i].responseTime;
@@ -203,6 +242,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // calculate and print avg times if there were any tasks
     if (totalTasks > 0) {
         printf("\nAverage Turnaround Time: %.2f ms\n",
                totalTurnaround / totalTasks);
@@ -216,59 +256,56 @@ int main(int argc, char *argv[]) {
 }
 
 void priorityAlgo(Task queue[], int size) {
-    // sort queue 1
-    sortPriority(queue, size);
-
-    // add executions using printGantt helper function
+    // queue is already sorted, so run the first unfinished task
     for (int i = 0; i < size; i++) {
-        recordExecution(&queue[i], queue[i].remainingTime);
+        if (queue[i].remainingTime > 0) {
+            recordExecution(&queue[i], queue[i].remainingTime);
+            return;
+        }
     }
 }
 
 void SJFAlgo(Task queue[], int size) {
-    // sort queue 2
-    sortBurst(queue, size);
-
-    // add executions using printGantt helper function
+    // queue is already sorted, so run the first unfinished task
     for (int i = 0; i < size; i++) {
-        recordExecution(&queue[i], queue[i].remainingTime);
+        if (queue[i].remainingTime > 0) {
+            recordExecution(&queue[i], queue[i].remainingTime);
+            return;
+        }
     }
 }
 
-// round robin scheduling for queue 3
+// round robin scheduling for queue 3, runs one quantum then returns
 void roundRobinAlgo(Task queue[], int size) {
-    int unfinished = size;
+    for (int k = 0; k < size; k++) {
+        int i = (rrIndex + k) % size;
 
-    // keep running until every task finishes
-    while (unfinished > 0) {
-        for (int i = 0; i < size; i++) {
+        if (queue[i].remainingTime > 0) {
+            int executionTime;
 
-            if (queue[i].remainingTime > 0) {
-                int executionTime;
-
-                // tasks can run for a maximum of 10 ms
-                if (queue[i].remainingTime < 10) {
-                    executionTime = queue[i].remainingTime;
-                } else {
-                    executionTime = 10;
-                }
-
-                recordExecution(&queue[i], executionTime);
-
-                // check if the task finished
-                if (queue[i].remainingTime == 0) {
-                    unfinished--;
-                }
+            // tasks can run for a maximum of 10 ms
+            if (queue[i].remainingTime < 10) {
+                executionTime = queue[i].remainingTime;
+            } else {
+                executionTime = 10;
             }
+
+            recordExecution(&queue[i], executionTime);
+
+            // next call starts with the task after this one
+            rrIndex = (i + 1) % size;
+            return;
         }
     }
 }
 
 // first come first served for queue 4
 void FCFSAlgo(Task queue[], int size) {
-    // tasks run in the order they were added
     for (int i = 0; i < size; i++) {
-        recordExecution(&queue[i], queue[i].remainingTime);
+        if (queue[i].remainingTime > 0) {
+            recordExecution(&queue[i], queue[i].remainingTime);
+            return;
+        }
     }
 }
 
@@ -374,4 +411,12 @@ void printStatistics(Task tasks[], int size) {
                tasks[i].waitingTime,
                tasks[i].responseTime);
     }
+}
+
+// checks if a queue still has unfinished tasks
+int hasTasks(Task queue[], int size) {
+    for (int i = 0; i < size; i++) {
+        if (queue[i].remainingTime > 0) return 1;
+    }
+    return 0;
 }
