@@ -102,8 +102,6 @@ int main(int argc, char *argv[]) {
 
         if (!valid) continue;
 
-        // DEBUG: printf("Task: %s, Priority: %d, Burst: %d, Queue: %d\n",
-
         // initialize execution fields for task
         task.remainingTime = task.burstTime;
         task.completionTime = 0;
