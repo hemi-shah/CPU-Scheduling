@@ -2,7 +2,7 @@
 Operating Systems: CPSC 380 - Programming Assignment 2
 
 ## Author
-Name: 
+Name:  
 Collaborator: 
 
 ## Design Overview
