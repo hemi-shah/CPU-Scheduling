@@ -27,6 +27,7 @@ The program calculates the turnaround time, waiting time, and response time for 
     ./CPUscheduler inputfile.txt
 
 ## Known Bugs or Problems
+No known bugs or problems.
 
 ## Output Result
 ![Application Screenshot](screenshots/outputScreenshot.png)
